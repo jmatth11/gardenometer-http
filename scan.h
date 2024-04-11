@@ -9,9 +9,9 @@
  * @param[in] port The port to listen to.
  * @param[in] path The uri.
  * @param[in] key The key for verification of home website.
- * @param[out] out The HTTPClient object to populate if home website is found.
+ * @param[in/out] out The HTTPClient object to populate if home website is found.
  * @return 1 for success, 0 for failure.
  */
-int scan_ips_for_website(int port, String path, String key, HTTPClient *out);
+int scan_ips_for_website(int port, String path, String key, HTTPClient *http);
 
 #endif

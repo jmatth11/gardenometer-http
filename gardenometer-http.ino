@@ -26,13 +26,23 @@ void garden_no_connection(state_machine_t *sm, void *context);
 void garden_sending_data(state_machine_t *sm, void *context);
 void garden_error(state_machine_t *sm, void *context);
 
+void send_code(state_t s) {
+  Serial.print("code:");
+  Serial.println(s);
+}
+
 void setup() {
   Serial.begin(115200);
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
+  int wifi_count = 0;
   while (WiFi.status() != WL_CONNECTED) {
+    if (wifi_count > 10) {
+      send_code(ERROR);
+    }
     // wait until connected
     delay(500);
+    ++wifi_count;
   }
   state_machine.state = NO_CONNECTION;
   state_machine.no_connection = garden_no_connection;
@@ -63,7 +73,10 @@ void loop() {
 void garden_no_connection(state_machine_t *sm, void *context) {
   struct garden_state *state = (struct garden_state *)context;
   if (scan_ips_for_website(port, path, key, &state->http)) {
+    send_code(CLEAR_ERROR);
     sm->state = NONE;
+  } else {
+    send_code(ERROR);
   }
 }
 
@@ -74,8 +87,7 @@ void garden_sending_data(state_machine_t *sm, void *context) {
   if (httpCode == HTTP_CODE_OK) {
     String response = state->http.getString();
     if (response != "") {
-      // TODO maybe don't add "res:"
-      Serial.println("res:" + response);
+      Serial.println(response);
     }
     sm->state = NONE;
   } else if (httpCode == HTTPC_ERROR_CONNECTION_FAILED) {
@@ -89,11 +101,9 @@ void garden_sending_data(state_machine_t *sm, void *context) {
 void garden_error(state_machine_t *sm, void *context) {
   struct garden_state *state = (struct garden_state *)context;
   if (sm->state == ERROR) {
-    Serial.print("code:");
-    Serial.println(ERROR);
+    send_code(ERROR);
     Serial.println(state->data);
   } else {
-    Serial.print("code:");
-    Serial.println(CLEAR_ERROR);
+    send_code(CLEAR_ERROR);
   }
 }

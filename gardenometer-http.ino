@@ -34,7 +34,6 @@ void send_code(state_t s, String msg) {
 
 int connect_to_wifi() {
   if (WiFi.status() == WL_CONNECTED) return 0;
-  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   int wifi_count = 0;
   while (WiFi.status() != WL_CONNECTED) {
@@ -50,6 +49,7 @@ int connect_to_wifi() {
 
 void setup() {
   Serial.begin(9600);
+  WiFi.mode(WIFI_STA);
   connect_to_wifi();
   state_machine.state = NO_CONNECTION;
   state_machine.no_connection = garden_no_connection;

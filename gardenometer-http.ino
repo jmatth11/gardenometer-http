@@ -10,7 +10,7 @@
 const char *ssid = "";
 const char *password = "";
 const char *path = "/status";
-const char *key = "gardenometer";
+const String key = "gardenometer";
 const int port = 8000;
 const char *status = "status:";
 
@@ -26,24 +26,31 @@ void garden_no_connection(state_machine_t *sm, void *context);
 void garden_sending_data(state_machine_t *sm, void *context);
 void garden_error(state_machine_t *sm, void *context);
 
-void send_code(state_t s) {
+void send_code(state_t s, String msg) {
   Serial.print("code:");
   Serial.println(s);
+  Serial.println(msg);
 }
 
-void setup() {
-  Serial.begin(115200);
+int connect_to_wifi() {
+  if (WiFi.status() == WL_CONNECTED) return 0;
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   int wifi_count = 0;
   while (WiFi.status() != WL_CONNECTED) {
     if (wifi_count > 10) {
-      send_code(ERROR);
+      send_code(ERROR, "cannot connect to wifi.");
     }
     // wait until connected
     delay(500);
     ++wifi_count;
   }
+  return 1;
+}
+
+void setup() {
+  Serial.begin(9600);
+  connect_to_wifi();
   state_machine.state = NO_CONNECTION;
   state_machine.no_connection = garden_no_connection;
   state_machine.sending_data = garden_sending_data;
@@ -59,6 +66,9 @@ int parse_serial(String data) {
 }
 
 void loop() {
+  if (connect_to_wifi()) {
+    state_machine.state = NO_CONNECTION;
+  }
   state.data = "";
   if (Serial.available() && state_machine.state != NO_CONNECTION) {
     state.data = Serial.readStringUntil('\n');
@@ -73,10 +83,10 @@ void loop() {
 void garden_no_connection(state_machine_t *sm, void *context) {
   struct garden_state *state = (struct garden_state *)context;
   if (scan_ips_for_website(port, path, key, &state->http)) {
-    send_code(CLEAR_ERROR);
+    send_code(CLEAR_ERROR, "CLEAR ERROR -- ALL GOOD");
     sm->state = NONE;
   } else {
-    send_code(ERROR);
+    send_code(ERROR, "error connecting to url");
   }
 }
 
@@ -101,9 +111,9 @@ void garden_sending_data(state_machine_t *sm, void *context) {
 void garden_error(state_machine_t *sm, void *context) {
   struct garden_state *state = (struct garden_state *)context;
   if (sm->state == ERROR) {
-    send_code(ERROR);
+    send_code(ERROR, "setting error state");
     Serial.println(state->data);
   } else {
-    send_code(CLEAR_ERROR);
+    send_code(CLEAR_ERROR, "clearing error state");
   }
 }
